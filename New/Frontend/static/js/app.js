@@ -5,7 +5,7 @@ import { PCMPlayer, setupAudioRecorder, processAudioPacket } from './modules/aud
 import * as UI from './modules/ui.js';
 import * as Network from './modules/network.js';
 import { setUiState, getUiState } from './modules/states.js';
-import { onWindowResize, startAnimation, loadVRMModel, init3DScene } from './modules/scene.js';
+import { onWindowResize, startAnimation, loadVRMModel, init3DScene, playAnimation } from './modules/scene.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     init();
@@ -43,8 +43,13 @@ async function loadInitData() {
         if (elements.modelSelect && modelData.models) {
             elements.modelSelect.innerHTML = modelData.models
                 .map(name => `<option value="${name}">${name}</option>`).join('');
-            if (modelData.models.length > 0) {
-                loadVRMModel(modelData.models[0]);
+            const models = modelData.models;
+            if (models.length > 0) {
+                // Default avatar (falls back to the first available model)
+                const defaultModel = '788686174174413810.vrm';
+                const def = models.includes(defaultModel) ? defaultModel : models[0];
+                elements.modelSelect.value = def;
+                loadVRMModel(def);
             }
         }
     } catch (e) {
@@ -184,6 +189,7 @@ async function handleVoiceStream(prompt) {
                     if (!started) {
                         started = true;
                         setUiState('speaking');
+                        playAnimation('taunt'); // gesture while talking
                         UI.beginStreaming(aiBubble);
                     }
                     UI.appendToBubble(aiBubble, packet.content);
@@ -207,6 +213,7 @@ async function handleVoiceStream(prompt) {
     } finally {
         state.abortController = null;
         setUiState('idle');
+        playAnimation('neutral'); // return to resting idle
     }
 }
 

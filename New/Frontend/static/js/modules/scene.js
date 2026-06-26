@@ -141,6 +141,15 @@ export function updateVibe(vibe) {
     if(item) playVRMA(item.file);
 }
 
+// Play a random animation from a named category defined in index.md
+// (e.g. 'neutral' = Idle, 'taunt' = a gesture). Falls back to 'neutral'.
+export function playAnimation(category = 'neutral') {
+    const list = animationDB[category] || animationDB['neutral'];
+    if (!list || !list.length) return;
+    const item = list[Math.floor(Math.random() * list.length)];
+    if (item) playVRMA(item.file);
+}
+
 function animate() {
     if (!isAnimating) return;
     requestAnimationFrame(animate);
