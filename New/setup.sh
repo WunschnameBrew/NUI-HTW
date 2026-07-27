@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# macOS/Linux setup script
 set -euo pipefail
 cd "$(dirname "$0")"
 
