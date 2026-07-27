@@ -89,9 +89,12 @@ async function init() {
             refreshExpressionPreview();
         });
     }
-    if (!state.sessionId) {
-        state.sessionId = `session-${Date.now()}`;
+    let storedSession = localStorage.getItem('koa_session_id');
+    if (!storedSession) {
+        storedSession = 'default';
+        localStorage.setItem('koa_session_id', storedSession);
     }
+    state.sessionId = storedSession;
 
     await loadInitData();
 
@@ -252,6 +255,9 @@ async function handleVoiceStream(prompt) {
     const aiBubble = UI.addStreamingMessage();
 
     if (state.audioContext.state === 'suspended') await state.audioContext.resume();
+    if (state.audioPlayer) {
+        state.audioPlayer.stop();
+    }
     state.audioPlayer = new PCMPlayer(state.audioContext);
 
     state.abortController = new AbortController();
@@ -308,13 +314,27 @@ async function handleVoiceStream(prompt) {
         }
     } finally {
         state.abortController = null;
-        setUiState('idle');
-        const remainingHold = Math.max(0, moodHoldUntil - Date.now());
-        setTimeout(() => blendToNeutral(), Math.min(remainingHold + 250, 2300));
+        if (state.audioPlayer && state.audioContext) {
+            let silenceTicks = 0;
+            const checkAudio = setInterval(() => {
+                if (!state.audioPlayer.hasAudioPlaying()) {
+                    silenceTicks += 1;
+                    if (silenceTicks >= 10) { // 1 second of total silence
+                        clearInterval(checkAudio);
+                        if (getUiState() !== 'idle') setUiState('idle');
+                    }
+                } else {
+                    silenceTicks = 0; // Reset silence counter if audio is playing
+                }
+            }, 100);
+        } else {
+            setUiState('idle');
+        }
     }
 }
 
 function stopSpeaking() {
+    state.lastAudioTime = 0;
     if (state.abortController) {
         state.abortController.abort();
         state.abortController = null;
@@ -322,6 +342,24 @@ function stopSpeaking() {
     if (state.audioPlayer) state.audioPlayer.stop();
     setUiState('idle');
 }
+
+// Lipsync & Audio Driven State Monitor
+setInterval(() => {
+    if (state.isRecording) return;
+    
+    const isLipSyncActive = (Date.now() - (state.lastAudioTime || 0)) < 1500;
+    const isHardwareActive = Boolean(state.audioPlayer && state.audioPlayer.hasAudioPlaying());
+
+    if (isLipSyncActive || isHardwareActive) {
+        if (getUiState() === 'idle') {
+            setUiState('speaking');
+        }
+    } else {
+        if (getUiState() === 'speaking' && !state.abortController) {
+            setUiState('idle');
+        }
+    }
+}, 100);
 
 function setMoodDebugVisible(visible) {
     if (!elements.moodDebug) return;

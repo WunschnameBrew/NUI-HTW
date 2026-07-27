@@ -34,3 +34,8 @@ export async function postClearHistory(sessionId = 'default') {
     });
     return await response.json();
 }
+
+export async function fetchHistory(sessionId = 'default') {
+    const response = await fetch(`/get_history?session_id=${encodeURIComponent(sessionId)}`);
+    return await response.json();
+}

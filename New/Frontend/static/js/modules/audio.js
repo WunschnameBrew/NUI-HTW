@@ -7,6 +7,7 @@ export class PCMPlayer {
         this.context = context;
         this.nextStartTime = 0;
         this.isPlaying = true;
+        this.activeSources = [];
         
         // Robust Analyzer setup for Lip Sync
         this.analyser = this.context.createAnalyser();
@@ -48,13 +49,39 @@ export class PCMPlayer {
         
         source.start(this.nextStartTime);
         this.nextStartTime += buffer.duration;
+        this.activeSources.push(source);
+
+        source.onended = () => {
+            const idx = this.activeSources.indexOf(source);
+            if (idx !== -1) {
+                this.activeSources.splice(idx, 1);
+            }
+        };
+    }
+
+    hasAudioPlaying() {
+        return this.isPlaying && (this.activeSources.length > 0 || this.nextStartTime > this.context.currentTime + 0.05);
     }
 
     stop() {
         this.isPlaying = false;
-        setTimeout(() => {
-             // Optional cleanup logic
-        }, 1000);
+        for (const source of this.activeSources) {
+            try {
+                source.stop(0);
+                source.disconnect();
+            } catch (_e) {}
+        }
+        this.activeSources = [];
+        this.nextStartTime = 0;
+        if (this.context && typeof this.context.suspend === 'function') {
+            try {
+                this.context.suspend().then(() => {
+                    if (this.context.state === 'suspended') {
+                        this.context.resume();
+                    }
+                });
+            } catch (_e) {}
+        }
     }
 }
 

@@ -1,5 +1,5 @@
 @echo off
-echo 🧠 Starting llama-server...
-cd llamacpp
-llama-server.exe --model ../Llama_Models/model.gguf --ctx-size 8192 --n-gpu-layers -1 --port 8001
+echo 🚀 Running Koa-AI Environment Setup...
+echo This will install Python dependencies, configure llama-cpp-python for your hardware, and download necessary models.
+python setup_environment.py
 pause

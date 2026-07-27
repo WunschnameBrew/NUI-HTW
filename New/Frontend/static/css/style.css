@@ -595,9 +595,8 @@ body.chat-collapsed #chat-reopen { display: flex; }
     100% { box-shadow: 0 0 0 0 rgba(236,72,153,0); }
 }
 
-/* stop/interrupt button: only relevant while speaking */
-#stop-btn { display: none; }
-body[data-ui-state="speaking"] #stop-btn { display: flex; }
+/* stop/interrupt button: always visible in dock */
+#stop-btn { display: flex !important; }
 
 /* ==========================================================================
    Settings drawer

@@ -17,6 +17,8 @@ let animationDB = {};
 let scene, camera, renderer, controls;
 let currentVrm = null;
 let currentMixer = null; 
+let currentAction = null;
+let currentlyPlayingFile = null;
 let clock = new THREE.Clock(); 
 let isAnimating = false;
 let activeBodyCategory = 'neutral';
@@ -143,6 +145,14 @@ export function loadVRMModel(filename) {
         scene.add(vrm.scene);
         currentVrm = vrm;
         currentMixer = new THREE.AnimationMixer(currentVrm.scene);
+        currentMixer.addEventListener('loop', (e) => {
+            const list = animationDB[activeBodyCategory] || animationDB['neutral'];
+            if (list && list.length > 1) {
+                const candidates = list.filter(i => i.file !== currentlyPlayingFile);
+                const nextItem = candidates[Math.floor(Math.random() * candidates.length)];
+                if (nextItem) playVRMA(nextItem.file);
+            }
+        });
         syncAvailableExpressions();
         updateVibe([0,0,0]); 
         if (!getExpressionController()) {
@@ -304,9 +314,7 @@ function setExpression(name, amount) {
 function applyEmotionBlend(delta) {
     if (!getExpressionController()) return;
 
-    if (!emotionBlendState.manualLock && Date.now() > emotionBlendState.releaseAt) {
-        emotionBlendState.targetWeight = 0;
-    }
+    // Emotions now persist indefinitely until the backend explicitly sends a new emotion
 
     const speed = emotionBlendState.targetWeight > emotionBlendState.currentWeight ? 8.0 : 3.5;
     const t = 1 - Math.exp(-speed * Math.max(0.0001, delta));
@@ -351,6 +359,14 @@ function updateLipSync(delta) {
         aaTarget = Math.min(1.0, normalized * 1.1);
         ohTarget = Math.min(0.65, Math.max(0, normalized - 0.28) * 0.7);
         ouTarget = Math.min(0.5, Math.max(0, normalized - 0.45) * 0.85);
+        
+        // Keep the emotion alive as long as the avatar is speaking
+        if (vol > 2) {
+            state.lastAudioTime = Date.now();
+            if (vol > 5) {
+                maintainMoodReaction();
+            }
+        }
     }
 
     const smooth = 1 - Math.exp(-12.0 * Math.max(0.0001, delta));
@@ -365,6 +381,7 @@ function updateLipSync(delta) {
 
 function playVRMA(filename) {
     if (!currentVrm || !currentMixer) return;
+    currentlyPlayingFile = filename;
     const loader = new THREE.GLTFLoader();
     loader.register((parser) => new THREE_VRM_ANIMATION.VRMAnimationLoaderPlugin(parser));
 
@@ -372,10 +389,17 @@ function playVRMA(filename) {
         const vrmAnimations = gltf.userData.vrmAnimations;
         if (vrmAnimations && vrmAnimations.length > 0) {
             const clip = THREE_VRM_ANIMATION.createVRMAnimationClip(vrmAnimations[0], currentVrm);
-            currentMixer.stopAllAction();
             const action = currentMixer.clipAction(clip);
-            action.fadeIn(0.5);
+            action.reset();
+            action.setEffectiveWeight(1.0);
+            
+            if (currentAction) {
+                action.crossFadeFrom(currentAction, 1.5, false);
+            } else {
+                action.fadeIn(1.5);
+            }
             action.play();
+            currentAction = action;
         }
     });
 }
@@ -417,8 +441,10 @@ export function applyMoodReaction(packet) {
         confidence,
     };
 
-    if (activeBodyCategory !== 'neutral' && hasAnimationCategory('neutral')) {
-        playAnimation('neutral');
+    const targetBodyCategory = hasAnimationCategory(mood.emotion) ? mood.emotion : 'neutral';
+    
+    if (activeBodyCategory !== targetBodyCategory) {
+        playAnimation(targetBodyCategory);
     }
 
     const reaction = setMoodExpression(mood.emotion, mood.intensity, confidence);
@@ -440,7 +466,7 @@ export function applyMoodReaction(packet) {
 
 export function maintainMoodReaction() {
     if (!emotionBlendState.manualLock) {
-        emotionBlendState.releaseAt = Math.max(emotionBlendState.releaseAt, Date.now() + 250);
+        emotionBlendState.releaseAt = Math.max(emotionBlendState.releaseAt, Date.now() + 1500);
     }
     return {
         bodyCategory: activeBodyCategory,
@@ -452,7 +478,11 @@ export function blendToNeutral() {
     emotionBlendState.manualLock = false;
     emotionBlendState.targetWeight = 0;
     emotionBlendState.releaseAt = Date.now();
-    playAnimation('neutral');
+    
+    // Only restart the neutral animation loop if we are currently playing an emotional body animation
+    if (activeBodyCategory !== 'neutral' && hasAnimationCategory('neutral')) {
+        playAnimation('neutral');
+    }
 }
 
 export function getSupportedExpressions() {

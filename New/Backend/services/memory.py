@@ -15,6 +15,8 @@ class MemoryService:
     def _init_db(self):
         conn = None
         try:
+            import os
+            os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             cursor.execute("""

@@ -5,6 +5,7 @@ import json
 import base64
 import re
 import logging
+import asyncio
 
 from Backend.config.settings import FRONTEND_DIR
 from Backend.services.llm import llm_service
@@ -94,6 +95,12 @@ async def get_animations():
     anims = await animation_service.get_animations()
     return {"animations": anims}
 
+@router.get("/get_history")
+async def get_history(session_id: str = "default"):
+    session_id = _normalize_session_id(session_id)
+    history = await memory_service.get_recent_history(limit=50, session_id=session_id)
+    return {"history": history}
+
 # --- CORE CHAT & VOICE ---
 
 async def _build_messages(prompt: str, history: list, system_prompt_name: str, use_memory: bool, session_id: str | None = None):
@@ -120,6 +127,7 @@ async def _build_messages(prompt: str, history: list, system_prompt_name: str, u
                 bounded_history.append({"role": role, "content": content})
                 running_chars += len(content)
             messages.extend(reversed(bounded_history))
+            history = [] # Deduplicate: ignore frontend history if DB memory is active
 
     if history:
         for item in history:
@@ -203,57 +211,61 @@ async def chat_voice_stream_endpoint(req: dict = Body(...)):
             }
         yield json.dumps(emotion_event) + "\n"
 
-        async for token in llm_service.stream_chat(messages):
-            full_resp += token
-            yield json.dumps({"type": "text", "content": token}) + "\n"
+        try:
+            async for token in llm_service.stream_chat(messages):
+                full_resp += token
+                yield json.dumps({"type": "text", "content": token}) + "\n"
 
-            text_buffer += token
-            parts = sentence_end_regex.split(text_buffer)
+                text_buffer += token
+                parts = sentence_end_regex.split(text_buffer)
 
-            if len(parts) > 1:
-                sentence_to_speak = parts[0].strip()
-                text_buffer = " ".join(parts[1:])
+                if len(parts) > 1:
+                    sentence_to_speak = parts[0].strip()
+                    text_buffer = " ".join(parts[1:])
 
-                if sentence_to_speak:
-                    audio_chunks = audio_service.piper_generator(sentence_to_speak)
-                    if audio_chunks:
-                        for audio_chunk in audio_chunks:
-                            if not audio_chunk:
-                                continue
-                            b64_audio = base64.b64encode(audio_chunk).decode('utf-8')
-                            yield json.dumps({"type": "audio", "data": b64_audio}) + "\n"
+                    if sentence_to_speak:
+                        audio_gen = audio_service.piper_generator(sentence_to_speak)
+                        if audio_gen is not None:
+                            async for audio_chunk in audio_gen:
+                                if not audio_chunk:
+                                    continue
+                                b64_audio = base64.b64encode(audio_chunk).decode('utf-8')
+                                yield json.dumps({"type": "audio", "data": b64_audio}) + "\n"
 
-        if text_buffer.strip():
-            audio_chunks = audio_service.piper_generator(text_buffer.strip())
-            if audio_chunks:
-                for audio_chunk in audio_chunks:
-                    if not audio_chunk:
-                        continue
-                    b64_audio = base64.b64encode(audio_chunk).decode('utf-8')
-                    yield json.dumps({"type": "audio", "data": b64_audio}) + "\n"
+            if text_buffer.strip():
+                audio_gen = audio_service.piper_generator(text_buffer.strip())
+                if audio_gen is not None:
+                    async for audio_chunk in audio_gen:
+                        if not audio_chunk:
+                            continue
+                        b64_audio = base64.b64encode(audio_chunk).decode('utf-8')
+                        yield json.dumps({"type": "audio", "data": b64_audio}) + "\n"
 
-        if full_resp.strip():
-            try:
-                assistant_emotion = _build_emotion_event(full_resp, "assistant")
-            except Exception as error:
-                logger.warning("Assistant emotion event failed: %s", error)
-                assistant_emotion = {
-                    "type": "emotion",
-                    "emotion": "neutral",
-                    "valence": "neutral",
-                    "valence_score": 0.0,
-                    "intensity": 0.0,
-                    "confidence": 0.0,
-                    "source": "assistant",
-                }
-            yield json.dumps(assistant_emotion) + "\n"
+            if full_resp.strip():
+                try:
+                    assistant_emotion = _build_emotion_event(full_resp, "assistant")
+                except Exception as error:
+                    logger.warning("Assistant emotion event failed: %s", error)
+                    assistant_emotion = {
+                        "type": "emotion",
+                        "emotion": "neutral",
+                        "valence": "neutral",
+                        "valence_score": 0.0,
+                        "intensity": 0.0,
+                        "confidence": 0.0,
+                        "source": "assistant",
+                    }
+                yield json.dumps(assistant_emotion) + "\n"
 
-        if use_memory:
-            try:
-                await memory_service.save_interaction("user", prompt, session_id=session_id, enabled=True)
-                await memory_service.save_interaction("assistant", full_resp, session_id=session_id, enabled=True)
-            except Exception as error:
-                logger.warning("Memory save failed in stream route: %s", error)
+            if use_memory:
+                try:
+                    await memory_service.save_interaction("user", prompt, session_id=session_id, enabled=True)
+                    await memory_service.save_interaction("assistant", full_resp, session_id=session_id, enabled=True)
+                except Exception as error:
+                    logger.warning("Memory save failed in stream route: %s", error)
+        except asyncio.CancelledError:
+            logger.info("Stream cancelled by client (kill switch triggered).")
+            raise
 
     return StreamingResponse(response_generator(), media_type="application/x-ndjson")
 
