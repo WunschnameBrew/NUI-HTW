@@ -15,12 +15,19 @@ from Backend.config.settings import FRONTEND_DIR
 from Backend.api.routes import router
 from Backend.services.memory import memory_service
 from Backend.services.animation import animation_service
+from Backend.services.llm import llm_service
+from Backend.services.audio import audio_service
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("--- 🚀 AI HUB BACKEND STARTING ---")
     await memory_service.start()
     await animation_service.run_startup_scan()
+    print("⏳ Loading local models (this might take a moment)...")
+    await asyncio.to_thread(llm_service.load_model)
+    await asyncio.to_thread(audio_service.load_whisper)
+    await asyncio.to_thread(audio_service.load_piper)
+    print("✅ Models loaded!")
     yield
     print("--- 🛑 SHUTDOWN ---")
 

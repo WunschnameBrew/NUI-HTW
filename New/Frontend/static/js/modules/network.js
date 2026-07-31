@@ -26,7 +26,16 @@ export async function postTranscribe(formData) {
     return await response.json();
 }
 
-export async function postClearHistory() {
-    const response = await fetch('/clear_history', { method: 'POST' });
+export async function postClearHistory(sessionId = 'default') {
+    const response = await fetch('/clear_history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId }),
+    });
+    return await response.json();
+}
+
+export async function fetchHistory(sessionId = 'default') {
+    const response = await fetch(`/get_history?session_id=${encodeURIComponent(sessionId)}`);
     return await response.json();
 }

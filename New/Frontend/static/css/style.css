@@ -256,6 +256,97 @@ body[data-ui-state="listening"] #listening-rings span:nth-child(3) { animation-d
 
 .top-actions { margin-left: auto; display: flex; gap: var(--space-2); }
 
+.mood-debug {
+    position: absolute;
+    top: 78px;
+    left: var(--space-4);
+    z-index: var(--z-overlay);
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--glass-border);
+}
+
+.mood-pill {
+    font-size: var(--fs-xs);
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--glass-border-2);
+    border-radius: var(--radius-full);
+    padding: 4px 8px;
+    white-space: nowrap;
+}
+
+#expression-preview-panel {
+    position: absolute;
+    top: 128px;
+    left: var(--space-4);
+    z-index: var(--z-overlay);
+    width: min(340px, calc(100vw - 2 * var(--space-4)));
+    padding: 12px;
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#expression-preview-panel[hidden] {
+    display: none !important;
+}
+
+.expression-preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.expression-preview-header h4 {
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    color: var(--fg);
+}
+
+.expression-preview-log {
+    font-size: var(--fs-xs);
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+}
+
+.expression-preview-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.expression-chip {
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--fg-muted);
+    border-radius: var(--radius-full);
+    padding: 5px 10px;
+    font-size: var(--fs-xs);
+    font-family: var(--font-mono);
+    transition: all var(--dur) var(--ease-out);
+}
+
+.expression-chip:hover {
+    color: var(--fg);
+    border-color: rgba(124, 58, 237, 0.75);
+}
+
+.expression-chip.active {
+    color: #f9f5ff;
+    border-color: rgba(236, 72, 153, 0.8);
+    background: rgba(236, 72, 153, 0.2);
+}
+
 /* Icon button */
 .icon-btn {
     width: 40px; height: 40px;
@@ -268,6 +359,23 @@ body[data-ui-state="listening"] #listening-rings span:nth-child(3) { animation-d
 .icon-btn:hover { background: rgba(255, 255, 255, 0.12); color: var(--fg); }
 .icon-btn:active { transform: scale(0.94); }
 .icon-btn svg, .icon-btn-sm svg, .ctrl-btn svg, .send-btn svg { width: 20px; height: 20px; }
+
+@media (max-width: 900px) {
+    .mood-debug {
+        left: var(--space-3);
+        right: var(--space-3);
+        top: 74px;
+        overflow-x: auto;
+        padding: 8px 10px;
+    }
+
+    #expression-preview-panel {
+        top: 124px;
+        left: var(--space-3);
+        right: var(--space-3);
+        width: auto;
+    }
+}
 
 /* ==========================================================================
    Chat panel (floating glass, right-docked, collapsible)
@@ -487,9 +595,8 @@ body.chat-collapsed #chat-reopen { display: flex; }
     100% { box-shadow: 0 0 0 0 rgba(236,72,153,0); }
 }
 
-/* stop/interrupt button: only relevant while speaking */
-#stop-btn { display: none; }
-body[data-ui-state="speaking"] #stop-btn { display: flex; }
+/* stop/interrupt button: always visible in dock */
+#stop-btn { display: flex !important; }
 
 /* ==========================================================================
    Settings drawer

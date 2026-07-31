@@ -26,7 +26,8 @@ export const state = {
     
     // NEW: Shared Audio Analyzer
     lipSyncAnalyser: null, 
-    lipSyncDataArray: null 
+    lipSyncDataArray: null,
+    lastAudioTime: 0
 };
 
 export function resetState() {
