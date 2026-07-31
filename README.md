@@ -42,14 +42,14 @@ This project is a local prototype/demo for an AI avatar interface. Text chat, av
 
 ### Tested Environment
 
-| Component | Version / Details |
-|---|---|
-| Operating system | <span style="color:red">TODO: Add the target operating system and version, for example Windows 11, macOS, or Linux.</span> |
-| Python | <span style="color:red">TODO: Add the tested Python version.</span> |
-| Browser | <span style="color:red">TODO: Add the tested browser and version.</span> |
-| llama.cpp | <span style="color:red">TODO: Add the tested llama.cpp build or commit/version.</span> |
-| Whisper | <span style="color:red">TODO: Add the tested Whisper server version and model.</span> |
-| Piper | <span style="color:red">TODO: Add the tested Piper version and voice model.</span> |
+| Component        | Version / Details                                                                      |
+|------------------|----------------------------------------------------------------------------------------|
+| Operating system | Windows 11, Linux, macOS                                                               |
+| Python           | 3.13                                                                                   |
+| Browser          | <span style="color:red">TODO: Add the tested browser and version.</span>               |
+| llama.cpp        | <span style="color:red">TODO: Add the tested llama.cpp build or commit/version.</span> |
+| Whisper          | <span style="color:red">TODO: Add the tested Whisper server version and model.</span>  |
+| Piper            | <span style="color:red">TODO: Add the tested Piper version and voice model.</span>     |
 
 ### Demo Scenario
 

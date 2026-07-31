@@ -13,6 +13,6 @@ fi
 echo "🧠 Starting llama-server with: $MODEL"
 exec llama-server \
   --model "$MODEL" \
-  --ctx-size 8192 \
+  --ctx-size 4096 \
   --n-gpu-layers -1 \
   --port 8001
