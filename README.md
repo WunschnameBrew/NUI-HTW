@@ -1,641 +1,325 @@
-# Koa-AI
+# Koa-AI – 3D VRM Voice & Text Assistant
 
-Koa-AI is a local AI avatar application. It serves a browser-based 3D VRM avatar, sends chat messages to a local llama.cpp server, supports optional speech-to-text through Whisper, streams text-to-speech through Piper, and can store conversations in SQLite.
-
-The project is designed to run locally. No hosted AI API is required when llama.cpp, Whisper, and Piper are available on the machine.
+Koa-AI is a locally running AI assistant with an interactive 3D VRM avatar. It combines local language-model inference, speech recognition, speech synthesis, emotion-driven avatar reactions, selectable personas, and optional conversation memory.
 
 ## Table of Contents
 
-- [Features](#features)
 - [Project Status](#project-status)
-- [Architecture](#architecture)
-- [Project Structure](#project-structure)
+- [Features](#features)
 - [Requirements](#requirements)
 - [Quick Start](#quick-start)
-- [Local Assets and Models](#local-assets-and-models)
-- [Configuration](#configuration)
-- [API Reference](#api-reference)
-- [Avatar Models and Animations](#avatar-models-and-animations)
-- [Memory](#memory)
-- [Privacy and Data Handling](#privacy-and-data-handling)
+- [Usage](#usage)
+- [Project Structure](#project-structure)
+- [Models and Configuration](#models-and-configuration)
+- [Personas](#personas)
+- [Avatars and Animations](#avatars-and-animations)
+- [Conversation Memory](#conversation-memory)
+- [Development](#development)
 - [Known Limitations](#known-limitations)
+- [Sources and Licenses](#sources-and-licenses)
+- [Privacy](#privacy)
 - [Troubleshooting](#troubleshooting)
-- [Third-Party Libraries and Tools](#third-party-libraries-and-tools)
-- [Documentation TODOs](#documentation-todos)
-- [Development Notes](#development-notes)
-
-## Features
-
-- Local LLM chat through an OpenAI-compatible llama.cpp endpoint
-- Streaming assistant responses in the frontend
-- Optional voice input through Whisper
-- Optional text-to-speech output through Piper
-- Interactive Three.js scene with a VRM avatar
-- Runtime avatar model selection from local `.vrm` files
-- Persona selection from local system prompt files
-- Optional SQLite conversation memory
-- Settings panel for memory, persona, model selection, and chat clearing
 
 ## Project Status
 
-This project is a local prototype/demo for an AI avatar interface. Text chat, avatar rendering, persona selection, and local memory are implemented. Voice input and voice output are supported by the backend, but depend on local Whisper and Piper installations.
+Koa-AI is a university project and functional prototype. It is intended for local demonstration and development rather than production use.
 
-### Tested Environment
+Launch scripts are provided for:
 
-| Component        | Version / Details                                                                      |
-|------------------|----------------------------------------------------------------------------------------|
-| Operating system | Windows 11, Linux, macOS                                                               |
-| Python           | 3.13                                                                                   |
-| Browser          | <span style="color:red">TODO: Add the tested browser and version.</span>               |
-| llama.cpp        | <span style="color:red">TODO: Add the tested llama.cpp build or commit/version.</span> |
-| Whisper          | <span style="color:red">TODO: Add the tested Whisper server version and model.</span>  |
-| Piper            | <span style="color:red">TODO: Add the tested Piper version and voice model.</span>     |
+- Windows
+- macOS
+- Linux
 
-### Demo Scenario
+### Current Test Environment
 
-<p>
-  <strong><span style="color:red">TODO</span></strong><br>
-  <span style="color:red">Add a short step-by-step demo flow, for example: start the local LLM, open the app, select a persona/avatar, send a text prompt, record a voice message, and clear the conversation history.</span>
-</p>
+The following environment is currently available for development and testing:
 
-Suggested structure:
+| Component | Version |
+|---|---|
+| Operating system | macOS 26.3.1 on Apple Silicon (`arm64`) |
+| Python | 3.10.5 |
+| Google Chrome | 150.0.7871.187 |
+| Mozilla Firefox | 153.0 |
 
-1. Start the local llama.cpp server.
-2. Start the FastAPI backend.
-3. Open `http://127.0.0.1:8000`.
-4. Select a persona and avatar model in the settings panel.
-5. Send a text message or record a voice message.
-6. Observe the streamed assistant response, voice output, and avatar animation.
+The environment and installed versions have been verified. A complete functional test of text chat, voice input, voice output, and VRM rendering is still pending. Windows and Linux are supported through the provided scripts but have not yet been documented as tested environments.
 
-### Screenshots / Demo Media
+## Features
 
-<p>
-  <strong><span style="color:red">TODO</span></strong><br>
-  <span style="color:red">Add screenshots or a GIF of the current UI. Recommended assets: main avatar view, settings panel, active conversation, and optional voice interaction demo.</span>
-</p>
+- Local GGUF inference with `llama-cpp-python`
+- Streaming text responses and Piper voice output
+- English voice input with `faster-whisper`
+- Interactive Three.js scene with selectable VRM avatars
+- Emotion-based facial expressions and VRMA body animations
+- Selectable system-prompt personas
+- Optional SQLite conversation memory
+- Stop button for cancelling responses and audio playback
 
-Suggested media placeholders:
+## Requirements
 
-```md
-![Main avatar view](docs/screenshots/main-avatar-view.png)
-![Settings panel](docs/screenshots/settings-panel.png)
-![Conversation view](docs/screenshots/conversation-view.png)
+- Python 3.10 to 3.12
+- A modern browser with WebGL support
+- Microphone permission for voice input
+- Internet access for the initial installation and model downloads
+- Several gigabytes of free disk space
+
+CPU inference works without a dedicated GPU. The setup also offers CUDA, Vulkan, and Apple Metal support where available.
+
+## Quick Start
+
+Clone or download the repository, open a terminal in the project folder, and change to the application directory:
+
+```bash
+cd New
 ```
 
-## Architecture
+### 1. Create a virtual environment
 
-```text
-Browser
-  |
-  | serves UI + static assets
-  v
-FastAPI backend (port 8000)
-  |-- /chat and /chat_voice_stream -> llama.cpp server (port 8001)
-  |-- /transcribe                 -> Whisper server (port 8003)
-  |-- Piper subprocess            -> streamed voice output
-  |-- SQLite                      -> optional chat memory
+Using a virtual environment keeps the project dependencies separate from the system-wide Python installation.
+
+macOS/Linux:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
-The backend serves both the API and the frontend. The frontend uses CDN-hosted Three.js/VRM libraries and local avatar assets.
+Windows:
+
+```bat
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+### 2. Run the automatic setup
+
+macOS/Linux:
+
+```bash
+bash setup.sh
+```
+
+Windows:
+
+```bat
+setup.bat
+```
+
+Alternatively, run the setup script directly:
+
+```bash
+python setup_environment.py
+```
+
+The setup installs the Python dependencies and downloads the default language model and Piper voice. Select CPU by pressing Enter, or choose CUDA, Vulkan, or Metal when compatible hardware and drivers are available.
+
+### 3. Start Koa-AI
+
+macOS/Linux:
+
+```bash
+./start.sh
+```
+
+Windows:
+
+```bat
+start.bat
+```
+
+Alternatively:
+
+```bash
+python start.py
+```
+
+Open [http://localhost:8000](http://localhost:8000) in your browser. Initial startup may take longer while the local models are downloaded or loaded.
+
+## Usage
+
+- Click the microphone button to start or stop recording.
+- Click the message button to enter a text prompt.
+- Use the stop button to cancel the current response and audio playback.
+- Open the settings to change the persona or avatar and enable or disable memory.
+- Use **Clear history** to remove the stored conversation.
+
+The project includes the `Default` and `Concise` personas.
+
+### Typical Workflow
+
+1. Start Koa-AI and wait until the models have loaded.
+2. Open `http://localhost:8000`.
+3. Select a persona and avatar in the settings.
+4. Enter a text prompt or record a voice message.
+5. Observe the streamed response, voice output, facial expression, and body animation.
+6. Stop the response if needed or clear the conversation history in the settings.
 
 ## Project Structure
 
 ```text
-.
-|-- README.md
-|-- New/
-|   |-- Backend/
-|   |   |-- main.py                 # FastAPI app and static file mounting
-|   |   |-- api/
-|   |   |   `-- routes.py           # Chat, voice, metadata, history endpoints
-|   |   |-- config/
-|   |   |   `-- settings.py         # Paths, ports, model/tool locations
-|   |   `-- services/
-|   |       |-- animation.py         # Available VRMA animations
-|   |       |-- audio.py             # Whisper transcription and Piper TTS
-|   |       |-- llm.py               # llama.cpp streaming client
-|   |       `-- memory.py            # SQLite conversation storage
-|   |-- Frontend/
-|   |   |-- index.html              # Browser UI
-|   |   `-- static/
-|   |       |-- css/
-|   |       |-- js/
-|   |       `-- assets/             # VRM models and animation files
-|   |-- start_backend.bat           # Windows backend launcher
-|   |-- start_llama.bat             # Windows llama.cpp launcher
-|   `-- start_llama.sh              # macOS/Linux llama.cpp launcher
-|-- Legacy.zip
-`-- New.zip
-```
-
-## Requirements
-
-Minimum requirements for text chat:
-
-- Python 3.10 or newer
-- A GGUF language model
-- `llama-server` from llama.cpp
-- A modern browser
-
-Additional requirements for voice features:
-
-- Whisper server executable and model file
-- Piper executable and voice model
-- Browser microphone permission
-
-Python packages:
-
-```bash
-pip install fastapi uvicorn openai httpx python-multipart
-```
-
-Frontend libraries are currently loaded through CDNs:
-
-- Three.js
-- fflate
-- GLTFLoader, FBXLoader, and OrbitControls
-- `@pixiv/three-vrm`
-- `@pixiv/three-vrm-animation`
-
-### Dependency File
-
-<p>
-  <strong><span style="color:red">TODO</span></strong><br>
-  <span style="color:red">Create <code>New/requirements.txt</code> with all Python dependencies and replace the inline <code>pip install ...</code> command above with <code>pip install -r requirements.txt</code>.</span>
-</p>
-
-### External Tool Setup
-
-| Tool | Setup notes |
-|---|---|
-| Python | <span style="color:red">TODO: Add supported Python versions and installation notes.</span> |
-| llama.cpp | <span style="color:red">TODO: Add download/build instructions for <code>llama-server</code> and explain where the executable should be placed.</span> |
-| Whisper | <span style="color:red">TODO: Add download/setup instructions for the Whisper server and required model file.</span> |
-| Piper | <span style="color:red">TODO: Add download/setup instructions for Piper and the required voice model.</span> |
-| Browser | <span style="color:red">TODO: Add tested browser versions and microphone permission requirements.</span> |
-
-## Quick Start
-
-Run these commands from the repository root.
-
-### 1. Install Python dependencies
-
-Using a virtual environment is recommended:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install fastapi uvicorn openai httpx python-multipart
-```
-
-On Windows, activate the environment with:
-
-```bat
-.venv\Scripts\activate
-```
-
-### 2. Add a GGUF model
-
-Place a GGUF model in:
-
-```text
-New/Llama_Models/
-```
-
-On Windows, the provided `start_llama.bat` expects this exact file:
-
-```text
-New/Llama_Models/model.gguf
-```
-
-On macOS/Linux, `start_llama.sh` automatically uses the first `.gguf` file in `New/Llama_Models/`.
-
-### 3. Start llama.cpp
-
-macOS/Linux:
-
-```bash
-cd New
-chmod +x start_llama.sh
-./start_llama.sh
-```
-
-Windows:
-
-```bat
-cd New
-start_llama.bat
-```
-
-The llama.cpp OpenAI-compatible API should now be available at:
-
-```text
-http://127.0.0.1:8001/v1
-```
-
-### 4. Start the backend
-
-Open a second terminal.
-
-macOS/Linux:
-
-```bash
-cd New
-python -m Backend.main
-```
-
-Windows:
-
-```bat
-cd New
-start_backend.bat
-```
-
-The backend starts at:
-
-```text
-http://127.0.0.1:8000
-```
-
-### 5. Open the app
-
-Open this URL in the browser:
-
-```text
-http://127.0.0.1:8000
-```
-
-## Local Assets and Models
-
-The backend expects these local folders relative to `New/`:
-
-```text
 New/
-|-- Llama_Models/                  # GGUF language models
-|-- llamacpp/                      # Windows: llama-server.exe
-|-- Whisper/                       # Windows: whisper-server.exe and models
-|-- Piper/                         # Windows: piper.exe and voice model
-|-- Persona/                       # Optional system prompts
-`-- data/                          # Auto-created SQLite/temp data
+├── Backend/
+│   ├── api/                 # FastAPI routes
+│   ├── config/              # Paths and model configuration
+│   ├── services/            # LLM, audio, memory, emotion, and animation logic
+│   └── main.py              # FastAPI application
+├── Frontend/
+│   ├── index.html           # Browser interface
+│   └── static/              # JavaScript, CSS, avatars, and animations
+├── Persona/                 # System-prompt personas
+├── Llama_Models/            # Local GGUF models
+├── Piper/                   # Piper voice model
+├── data/                    # SQLite database and temporary audio
+├── setup_environment.py     # Automated installation
+├── setup.bat / setup.sh     # Setup launchers
+└── start.bat / start.sh     # Application launchers
 ```
 
-Example files:
+## Models and Configuration
 
-| Purpose | Example path |
-|---|---|
-| LLM model | `New/Llama_Models/model.gguf` |
-| Whisper model | `New/Whisper/models/ggml-medium-q5_0.bin` |
-| Piper voice | `New/Piper/en_US-amy-medium.onnx` |
-| Persona | `New/Persona/Koa_Sys.txt` |
-
-Persona files must follow this naming pattern:
-
-```text
-*_Sys.txt
-```
-
-For example, `Koa_Sys.txt` appears as `Koa` in the persona dropdown.
-
-### Platform-Specific Tool Layout
-
-| Platform | Required layout |
-|---|---|
-| Windows | <span style="color:red">TODO: Document the exact expected folders for <code>llamacpp/</code>, <code>Whisper/</code>, and <code>Piper/</code>, including executable filenames.</span> |
-| macOS/Linux | <span style="color:red">TODO: Document how Whisper and Piper should be installed or referenced when <code>.exe</code> files are not used.</span> |
-
-### Asset Metadata
-
-| Asset type | Missing documentation |
-|---|---|
-| Default VRM avatar | <span style="color:red">TODO: Add source, author, license, and redistribution permission for the default avatar.</span> |
-| VRMA animations | <span style="color:red">TODO: Add source, author, license, and conversion notes for bundled animation files.</span> |
-| GGUF models | <span style="color:red">TODO: Add expected storage size range and clarify that model licenses depend on the selected model.</span> |
-
-## Configuration
-
-Main configuration file:
+The main configuration is located in:
 
 ```text
 New/Backend/config/settings.py
 ```
 
-Important settings:
+The default setup uses:
 
-| Variable | Default / Meaning |
+| Component | Model or location |
 |---|---|
-| `LLM_API_URL` | `http://127.0.0.1:8001/v1` |
-| `LLAMA_EXE` | Local llama.cpp executable path |
-| `MODELS_DIR` | Folder for GGUF models |
-| `FRONTEND_DIR` | Folder served as the frontend |
-| `DB_PATH` | SQLite database path |
-| `WHISPER_EXE` | Whisper server executable |
-| `WHISPER_MODEL` | Whisper model file |
-| `PIPER_EXE` | Piper executable |
-| `PIPER_VOICE` | Piper voice model |
+| Language model | `Dolphin3.0-Llama3.2-3B.Q4_K_S.gguf` |
+| Whisper model | `Systran/faster-distil-whisper-small.en` |
+| Piper voice | `en_US-amy-medium` |
+| Conversation database | `New/data/ai_hub.db` |
 
-The backend automatically creates `New/data/` and `New/Llama_Models/` if they do not exist.
+To use another language model, place a `.gguf` file in `New/Llama_Models/` and adjust the model selection in `settings.py` if necessary.
 
-### Environment Configuration
+## Personas
 
-<p>
-  <strong><span style="color:red">TODO</span></strong><br>
-  <span style="color:red">Move machine-specific paths from <code>settings.py</code> into environment variables or a <code>.env</code> file.</span>
-</p>
-
-Suggested future variables:
+Persona files are stored in `New/Persona/` and follow this naming scheme:
 
 ```text
-LLM_API_URL=
-LLAMA_EXE=
-WHISPER_EXE=
-WHISPER_MODEL=
-PIPER_EXE=
-PIPER_VOICE=
+<Name>_Sys.txt
 ```
 
-### Ports
+For example, `Concise_Sys.txt` appears as `Concise` in the settings. Add a UTF-8 text file following this scheme and reload the page to add another persona.
 
-| Service | Port |
-|---|---|
-| FastAPI backend | `8000` |
-| llama.cpp server | `8001` |
-| Whisper server | `8003` |
-| Piper | subprocess, no HTTP port |
+## Avatars and Animations
 
-<p>
-  <strong><span style="color:red">TODO</span></strong><br>
-  <span style="color:red">Add a <code>.env.example</code> file once environment-based configuration exists.</span>
-</p>
-
-## API Reference
-
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/` | Serves `Frontend/index.html` |
-| `GET` | `/get_system_prompts` | Lists persona files from `New/Persona/` |
-| `GET` | `/get_models` | Lists `.vrm` avatar models from `Frontend/static/assets/` |
-| `GET` | `/get_animations` | Lists `.vrma` animation files |
-| `POST` | `/chat` | Streams a text-only assistant response |
-| `POST` | `/transcribe` | Transcribes an uploaded audio file |
-| `POST` | `/chat_voice_stream` | Streams text and base64 audio packets as NDJSON |
-| `POST` | `/clear_history` | Deletes stored conversation history |
-
-### Chat Payload
-
-`POST /chat` and `POST /chat_voice_stream` expect a JSON body with these fields:
-
-```json
-{
-  "prompt": "Hello",
-  "history": [],
-  "system_prompt_name": "Koa",
-  "use_memory": true
-}
-```
-
-## Avatar Models and Animations
-
-Avatar models are stored as `.vrm` files in:
+Place `.vrm` avatar models in:
 
 ```text
 New/Frontend/static/assets/
 ```
 
-Animations are stored as `.vrma` files in:
+Place `.vrma` animation files in:
 
 ```text
 New/Frontend/static/assets/animations/converted_gltf/
 ```
 
-The animation registry is:
+Assign animations to emotion categories in `New/Frontend/static/assets/animations/index.md`:
 
 ```text
-New/Frontend/static/assets/animations/index.md
+#happy
+- Excited.vrma 1.0
+- Happy Idle.vrma 1.0
 ```
 
-Current animation states:
+Raw FBX source files can be stored in `animations/raw_fbx/`. An FBX-to-VRMA converter is not included in this repository.
 
-| State | File | Usage |
-|---|---|---|
-| `neutral` | `Idle.vrma` | Resting/default animation |
-| `taunt` | `Taunt.vrma` | Gesture while the assistant is speaking |
+## Conversation Memory
 
-More animation-specific documentation is available in:
-
-```text
-New/Frontend/static/assets/animations/README.md
-```
-
-## Memory
-
-Conversation memory is stored in SQLite when the memory toggle is enabled:
+When memory is enabled, conversations are stored locally in:
 
 ```text
 New/data/ai_hub.db
 ```
 
-The backend stores user and assistant messages in the `conversations` table. Clearing history from the UI calls `/clear_history` and deletes stored conversation rows.
+The history can be cleared from the settings. To remove all stored conversations manually, stop the application and delete the database file. It will be recreated on the next start.
 
-## Privacy and Data Handling
+## Development
 
-Koa-AI is intended to run locally. When all local tools are used, chat prompts, generated answers, and audio processing stay on the machine.
+Start the backend with automatic reload from the `New` directory:
 
-Current data handling:
-
-- Chat history is stored in `New/data/ai_hub.db` when memory is enabled.
-- Uploaded audio is temporarily written to `New/data/temp_audio/` during transcription.
-- Temporary audio files are deleted after transcription completes.
-- Frontend libraries are loaded from external CDNs, so the browser must contact those CDN hosts unless the dependencies are vendored locally.
-
-### Sensitive Data
-
-<p>
-  <strong><span style="color:red">TODO</span></strong><br>
-  <span style="color:red">Add a clear statement that explains whether this prototype is appropriate for private or sensitive data.</span>
-</p>
-
-### Data Deletion
-
-To remove stored conversation history, delete:
-
-```text
-New/data/ai_hub.db
+```bash
+python -m uvicorn Backend.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-<p>
-  <strong><span style="color:red">TODO</span></strong><br>
-  <span style="color:red">Add platform-specific deletion commands for Windows and macOS/Linux.</span>
-</p>
+Run the tests with:
 
-### Offline Operation
-
-<p>
-  <strong><span style="color:red">TODO</span></strong><br>
-  <span style="color:red">Document how to vendor frontend dependencies locally if the app must run without CDN access.</span>
-</p>
-
-### Asset Licenses
-
-<p>
-  <strong><span style="color:red">TODO</span></strong><br>
-  <span style="color:red">Document license restrictions for the selected GGUF model, avatar model, animation files, and Piper voice model.</span>
-</p>
+```bash
+python -m pytest
+```
 
 ## Known Limitations
 
-- The Windows launcher expects `New/Llama_Models/model.gguf`.
-- The macOS/Linux llama launcher uses the first `.gguf` file it finds in `New/Llama_Models/`.
-- Whisper and Piper paths are currently configured directly in `settings.py`.
-- Voice features depend on local executables that are not included in this repository.
-- The frontend depends on CDN-loaded libraries.
-- There is no automated test suite yet.
-- There is no dependency lock file or `requirements.txt` yet.
+- Voice input currently supports English only.
+- Model loading and local inference can be slow without hardware acceleration.
+- The first `.gguf` file found in `New/Llama_Models/` is selected automatically.
+- The browser interface loads fonts and 3D libraries from external CDNs and is therefore not fully offline.
+- Conversation memory is local to the backend installation and is not intended for isolated multi-user operation.
+- FBX source animations cannot be converted inside this repository because no conversion tool is included.
 
-### Planned Improvements
+## Sources and Licenses
 
-| Area | Missing improvement |
-|---|---|
-| Model path | <span style="color:red">TODO: Make the Windows model path configurable without editing <code>start_llama.bat</code>.</span> |
-| Startup scripts | <span style="color:red">TODO: Add cross-platform startup scripts for backend, LLM, Whisper, and Piper.</span> |
-| Health checks | <span style="color:red">TODO: Add checks for llama.cpp, Whisper, Piper, and required frontend assets.</span> |
-| Tests | <span style="color:red">TODO: Add basic automated tests for API routes and service initialization.</span> |
+### Project License
+
+No project-wide license file is currently included. Without an explicit license, no general permission to copy, modify, or redistribute the project is granted.
+
+<strong><span style="color:red">TODO</span></strong> (Choose a project license, add a `LICENSE` file, and state the license here.)
+
+### Models and Assets
+
+| Item | Source | License |
+|---|---|---|
+| Dolphin 3.0 Llama 3.2 GGUF | [QuantFactory/Dolphin3.0-Llama3.2-3B-GGUF](https://huggingface.co/QuantFactory/Dolphin3.0-Llama3.2-3B-GGUF) | <strong><span style="color:red">TODO</span></strong> (Add the applicable model license and any required attribution.) |
+| `faster-distil-whisper-small.en` | [Systran/faster-distil-whisper-small.en](https://huggingface.co/Systran/faster-distil-whisper-small.en) | <strong><span style="color:red">TODO</span></strong> (Verify and add the model license.) |
+| `en_US-amy-medium` voice | [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices) | <strong><span style="color:red">TODO</span></strong> (Add the voice-specific license and attribution from its model card.) |
+| `7523718638436607923.vrm` | <strong><span style="color:red">TODO</span></strong> (Add creator and original source URL.) | <strong><span style="color:red">TODO</span></strong> (Add the avatar's usage and redistribution license.) |
+| `788686174174413810.vrm` | <strong><span style="color:red">TODO</span></strong> (Add creator and original source URL.) | <strong><span style="color:red">TODO</span></strong> (Add the avatar's usage and redistribution license.) |
+| FBX and VRMA animations | <strong><span style="color:red">TODO</span></strong> (Add creator, asset pack, and original source URL.) | <strong><span style="color:red">TODO</span></strong> (Add the animation usage and redistribution license.) |
+
+The VRMA integration references the open-source [fbx2vrma-converter](https://github.com/tk256ailab/fbx2vrma-converter). Runtime libraries such as FastAPI, `llama-cpp-python`, Piper, Three.js, and `@pixiv/three-vrm` remain subject to their own licenses.
+
+## Privacy
+
+Language-model inference, transcription, speech synthesis, and conversation storage run locally. The initial setup downloads packages and models from PyPI and Hugging Face, and the frontend loads some libraries and fonts from external CDNs.
+
+Temporary microphone recordings are removed after transcription. Avoid processing sensitive information unless the local installation and the selected third-party models meet your security requirements.
 
 ## Troubleshooting
 
-### The app opens, but the LLM does not respond
+### No language model is loaded
 
-- Make sure `llama-server` is running on port `8001`.
-- Make sure a `.gguf` model exists in `New/Llama_Models/`.
-- Check `LLM_API_URL` in `New/Backend/config/settings.py`.
-- Check the backend terminal output for `[LLM Error: ...]`.
+- Make sure a `.gguf` file exists in `New/Llama_Models/`.
+- Run the setup again if the default model download failed.
+- If necessary, download the model from the source listed under [Sources and Licenses](#sources-and-licenses) and place it in `New/Llama_Models/`.
+- Check the terminal for model-loading errors.
 
 ### Voice input does not work
 
-- Allow microphone access in the browser.
-- Use `http://localhost:8000` or `http://127.0.0.1:8000`; browser microphone APIs usually require localhost or HTTPS.
-- Make sure `whisper-server.exe` and the Whisper model exist at the configured paths.
-- Check `WHISPER_EXE` and `WHISPER_MODEL` in `settings.py`.
+- Open the application through `http://localhost:8000`.
+- Grant microphone permission in the browser.
+- Check the terminal for Whisper errors.
 
 ### Voice output does not work
 
-- Make sure `piper.exe` and the Piper voice file exist at the configured paths.
-- Check `PIPER_EXE` and `PIPER_VOICE` in `settings.py`.
-- Check the backend terminal for Piper subprocess errors.
+- Make sure `en_US-amy-medium.onnx` and `en_US-amy-medium.onnx.json` exist in `New/Piper/`.
+- Run the setup again if either file is missing.
+- Check the terminal for Piper errors.
 
-### The avatar is not displayed
+### Setup completed, but model files are missing
 
-- Make sure at least one `.vrm` file exists in `New/Frontend/static/assets/`.
-- Check the browser console for CDN loading errors.
-- Check the browser console for missing local asset paths.
-
-### The frontend loads without styles or scripts
-
-- Start the app through the backend at `http://127.0.0.1:8000`.
-- Do not open `Frontend/index.html` directly from the filesystem, because the app expects backend routes and `/static/...` paths.
-
-## Third-Party Libraries and Tools
-
-Koa-AI uses or integrates with:
-
-- FastAPI for the backend API and static file serving
-- Uvicorn as the ASGI server
-- OpenAI Python SDK as an OpenAI-compatible client for llama.cpp
-- httpx for HTTP calls to the Whisper service
-- SQLite for local conversation storage
-- llama.cpp for local LLM inference
-- Whisper for speech-to-text
-- Piper for text-to-speech
-- Three.js for 3D rendering
-- pixiv three-vrm for VRM avatar loading
-- pixiv three-vrm-animation for VRM animation support
-- fflate and Three.js loaders for asset loading
-
-### Links and Licenses
-
-| Dependency / asset | Link | License / credit |
-|---|---|---|
-| FastAPI | <span style="color:red">TODO: Add official link.</span> | <span style="color:red">TODO: Add license.</span> |
-| Uvicorn | <span style="color:red">TODO: Add official link.</span> | <span style="color:red">TODO: Add license.</span> |
-| OpenAI Python SDK | <span style="color:red">TODO: Add official link.</span> | <span style="color:red">TODO: Add license.</span> |
-| httpx | <span style="color:red">TODO: Add official link.</span> | <span style="color:red">TODO: Add license.</span> |
-| llama.cpp | <span style="color:red">TODO: Add official link.</span> | <span style="color:red">TODO: Add license.</span> |
-| Whisper | <span style="color:red">TODO: Add official link.</span> | <span style="color:red">TODO: Add license.</span> |
-| Piper | <span style="color:red">TODO: Add official link.</span> | <span style="color:red">TODO: Add license.</span> |
-| Three.js | <span style="color:red">TODO: Add official link.</span> | <span style="color:red">TODO: Add license.</span> |
-| pixiv three-vrm | <span style="color:red">TODO: Add official link.</span> | <span style="color:red">TODO: Add license.</span> |
-| pixiv three-vrm-animation | <span style="color:red">TODO: Add official link.</span> | <span style="color:red">TODO: Add license.</span> |
-| Avatar asset | <span style="color:red">TODO: Add source link.</span> | <span style="color:red">TODO: Add author and license.</span> |
-| Animation assets | <span style="color:red">TODO: Add source links.</span> | <span style="color:red">TODO: Add authors and licenses.</span> |
-| Voice asset | <span style="color:red">TODO: Add source link.</span> | <span style="color:red">TODO: Add author and license.</span> |
-
-## Documentation TODOs
-
-### Screenshots
-
-<p>
-  <strong><span style="color:red">TODO</span></strong><br>
-  <span style="color:red">Insert screenshots of the main avatar view and settings panel.</span>
-</p>
-
-Suggested paths:
+Verify that these files exist:
 
 ```text
-docs/screenshots/main-avatar-view.png
-docs/screenshots/settings-panel.png
-docs/screenshots/conversation-view.png
+New/Llama_Models/Dolphin3.0-Llama3.2-3B.Q4_K_S.gguf
+New/Piper/en_US-amy-medium.onnx
+New/Piper/en_US-amy-medium.onnx.json
 ```
 
-### Demo Media
+Run the setup again if a download was interrupted. Existing valid files are reused.
 
-<p>
-  <strong><span style="color:red">TODO</span></strong><br>
-  <span style="color:red">Insert a short demo GIF or video link.</span>
-</p>
+### Hardware acceleration cannot be installed
 
-Suggested path:
-
-```text
-docs/demo/koa-ai-demo.gif
-```
-
-### First-Time Setup Guides
-
-<p>
-  <strong><span style="color:red">TODO</span></strong><br>
-  <span style="color:red">Add full first-time setup guides for Windows and macOS/Linux.</span>
-</p>
-
-Suggested files:
-
-```text
-docs/setup/windows.md
-docs/setup/macos-linux.md
-```
-
-### Dependency Setup
-
-<p>
-  <strong><span style="color:red">TODO</span></strong><br>
-  <span style="color:red">Add <code>requirements.txt</code> and update the installation instructions accordingly.</span>
-</p>
-
-### Model and Hardware Guidance
-
-<p>
-  <strong><span style="color:red">TODO</span></strong><br>
-  <span style="color:red">Add model recommendations, hardware expectations, and a short explanation of the frontend module structure.</span>
-</p>
-
-### Contribution and License
-
-<p>
-  <strong><span style="color:red">TODO</span></strong><br>
-  <span style="color:red">Add contribution and license sections once the maintenance and licensing decisions are final.</span>
-</p>
-
-## Development Notes
-
-- The project currently has no `requirements.txt`; dependencies are listed in this README.
-- The frontend is plain HTML/CSS/JavaScript and does not require a Node.js build step.
-- The current setup is optimized for local development and demonstration.
-- For a cleaner setup, consider adding a `requirements.txt`, a cross-platform launcher, and environment-based configuration for local tool paths.
+Run the setup again and select CPU mode. For CUDA, Vulkan, or Metal, verify that the required drivers and build tools are installed.
