@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="NUI-HTW">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/Legacy.zip!/" />
+      <root url="jar://$PROJECT_DIR$/New.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
